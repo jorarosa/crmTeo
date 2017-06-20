@@ -1,0 +1,436 @@
+h1{
+font-size: 14px;
+}
+span.usuario{
+font-weight: bold;
+}
+span.centro{
+font-weight: bold;
+}
+.msg{
+	background-color: DarkSlateBlue ;
+	text-align: center;
+	font-size: small;
+	color:  LightSteelBlue;
+}
+
+.errormsg
+{
+/*position:absolute;*/
+text-align: center ;
+background-color: Indianred ;
+/*color: indianred;*/
+font-size: small;
+}
+
+.listadoc
+{
+position:absolute;
+text-align: center ;
+background-color: DarkSlateBlue ;
+/*color: indianred;*/
+font-size: small;
+top: 240px;
+}
+
+
+div.marco
+{
+width: 100%;
+left: 20%;
+}
+
+
+div.cabecera
+{
+color:white;
+background-color: DarkSlateBlue ;
+clear:left;
+height : 55px;
+width:100%;
+margin-bottom:10px;
+border:1px solid gray;
+padding:1px;
+}
+
+input.orden{
+	background-color:   LightSteelBlue;
+	margin : 2px;
+	/*border: thin solid transparent ;*/
+	border: none ;
+/*	color: DarkSlateBlue;*/
+	font-weight: bold;
+}
+
+input.ordenb{ /* Botones de alta, baja , blanco etc */
+	background-color: LightSteelBlue ;
+	margin : 2px;
+	/*border: thin solid transparent ;*/
+	width: 24px;
+}
+input.ordenselected{
+	background-color: LightSteelBlue ;
+	margin : 2px;
+	border: thin solid transparent ;
+}
+
+a.orden{
+	/*background-color:  DarkSlateBlue;*/
+	margin : 2px;
+	font-size: 12px;
+	border: thin solid transparent ;
+	text-decoration: none;
+}
+
+input.aorden{
+	margin : 2px;
+	font-size: 12px;
+	/*border: none ;*/
+	background-color: transparent ;
+	color: blue;
+	}
+
+div.boxleft
+{
+position:absolute;
+left : 15px;
+top : 10;
+margin:0;
+padding:1px;
+/*white-space:nowrap;*/
+}
+
+div.boxcenter
+{
+position : absolute ;
+left : 40%;
+top : 15px;
+padding:1px;
+}
+
+div.boxright
+{
+position:absolute;
+right : 15px;
+top : 15px;
+padding:1px;
+}
+
+div.bloque{
+	position: relative;
+	/*top: 60px;*/
+	width:400px;
+	}
+div.acceso{
+	position: relative;
+	/*top: 60px;*/
+	width:600px;
+	display: none;
+	}
+
+div.cabeza{
+	position: relative;
+	top: 0px;
+	/*border: thick solid green;*/
+	height : 2px;
+	}
+
+div.menu{
+	position: relative;
+	top: 2px;
+	bottom: 2px;
+	width:550px;
+	white-space:nowrap
+	}
+
+div.submenu{
+	position: absolute;
+	top: 52px;
+	width:800px;
+	white-space:nowrap
+	}
+
+.option{
+	background-color: DarkSlateBlue;
+	color:  LightSteelBlue;
+	height: 19;
+	font-weight: bold;
+	}
+
+.opselec{
+	/*background-color:  LightSteelBlue;*/
+	background-color: oldlace;
+	color: DarkSlateBlue;
+	height: 19;
+	font-weight: bold;
+	}
+
+
+div.formmenu{
+	position: absolute;
+	top: 45px;
+	width:800px;
+	white-space:nowrap
+	}
+
+div.form{
+	position: absolute;
+	width: 100%;
+	/*top: 60px;*/
+	top: 80px;
+	/*border: thick solid red ;*/
+	}
+
+div.status{
+	position: absolute;
+	width: 100%;
+	top: 300;
+	font-size: small;
+	}
+
+span.navigator{
+	/*position: absolute;*/
+	left: 30%;
+	}
+
+div.pie{
+	position: absolute;
+	left: 30%;
+	top: 400px;
+	}
+
+p.piedoc{
+	position: absolute;
+	text-align: center;
+	top: 300px;
+	background-color: IndianRed ;
+	}
+
+.titular{
+	text-align: center;
+	font-size: 20; 
+	}
+
+	
+span.titulo{
+font-family: Helvetica; 
+font-size: 15pt; 
+text-decoration: none; 
+text-align: right; 
+vertical-align: top; 
+font-weight: bold;
+margin: 2px;
+/*border: thin solid ;*/
+}
+
+a.opcion{
+font-family: Helvetica; 
+font-size: 10pt; 
+text-decoration: none; 
+text-align: center; 
+vertical-align: top; 
+font-weight: bold;
+margin: 2px;
+/*position: absolute ;*/
+border: thin solid ;
+}
+
+div.central{
+	position: absolute; 
+	top:70px;
+	width :100%;
+	height : 80% ;
+	margin-right:1px;
+	}
+
+table.ficha{
+	background-color: oldlace ;
+	width : 800px;
+	border-spacing: 4px;
+	border : thin solid LightSteelBlue;
+	font-size: 10px;
+	}
+table.query_to_table{
+	background-color: oldlace ;
+	width : 800px;
+	border-spacing: 4px;
+	border : thin solid LightSteelBlue;
+	font-size: 10px;
+	}
+/* Etiquetas de campos y cabecera de tabla */
+span.label{ 
+	color: navy;
+	font-family: arial, "lucida console", sans-serif ;
+	margin : 5px;
+	font-size: small;
+	text-align: right;
+	white-space:nowrap;
+	vertical-align: top
+	}
+
+a.posicion{ 
+	position: absolute; 
+	font-family: arial, "lucida console", sans-serif ;
+	/*margin : 5px;*/
+	font-size: 8px;
+	top: 68;
+	text-align: right;
+	white-space:nowrap
+	}
+
+span.tedtext{ 
+	font-family: arial, "lucida console", sans-serif ;
+	margin : 1px;
+	font-size: small;
+	text-align: right;
+	color: red;
+	}
+
+span.textarea{ 
+	font-family: arial, "lucida console", sans-serif ;
+	margin : 1px;
+	font-size: small;
+	text-align: justify ;
+	color: red;
+	}
+
+
+span.labelhead{
+	font-family: arial, "lucida console", sans-serif ;
+	margin : 5px;
+	font-size: small;
+	text-align: right;
+	white-space:nowrap;
+	font-weight: bold;
+	}
+
+.field{
+	font-family: arial, "lucida console", sans-serif ;
+	margin : 0px;
+	font-size: small;
+	color:red;
+	}
+
+span.errmsg{
+	background-color: IndianRed ;
+	width : 800px;
+	}
+
+span.msg{
+	background-color: LightSteelBlue ;
+	width : 800px;
+	}
+
+
+table.report{
+	background-color: LightSteelBlue ;
+	border-spacing: 4px;
+	border : thin solid green;
+	font-size: 10px;
+	}
+
+table.subreport{
+	background-color: LightSteelBlue ;
+	border-spacing: 4px;
+	margin-left: 4px;
+	margin-bottom: 4px;
+	border : thin solid green;
+	font-size: 10px;
+	}
+
+div.report{
+	margin-left:4px;
+	margin-top: 4px;
+	margin-bottom: 40px;
+	border : thin solid  LightSteelBlue;
+	}
+
+tr.reprowalt{
+	background-color: AliceBlue ;
+	}
+
+tr.reprow{
+	background-color: Lavender ;
+	}
+
+
+div.subreport{
+	margin-left: 40px;
+	margin-top: 4px;
+	margin-bottom: 40px;
+	border : thin solid  LightSteelBlue;
+	width : 800px;
+	}
+span.rep1{
+	background-color: LightSteelBlue ;
+	width : 800px;
+	}
+span.rep2{
+	background-color: LightSteelBlue ;
+	width : 800px;
+	margin-left: 4px;
+	margin-top: 4px;
+	}
+th
+{
+    COLOR:  navy;
+    FONT-FAMILY: verdana, arial, sans-serif;
+    FONT-SIZE: 12px;
+    FONT-STYLE: normal;
+    FONT-WEIGHT: 400;
+    margin: 10px;
+    border : thin solid  LightSteelBlue;
+}
+
+td
+{
+    COLOR:  #0631c3;
+    FONT-FAMILY: verdana, arial, sans-serif;
+    FONT-SIZE: 11px;
+    FONT-STYLE: normal;
+    FONT-WEIGHT: 400;
+    margin: 10px;
+    border : thin solid  LightSteelBlue;
+}
+td.cabecera
+{
+    COLOR:  Navy;
+    background-color:  LightSteelBlue  ;
+    FONT-FAMILY: verdana, arial, sans-serif;
+    FONT-SIZE: 14px;
+    FONT-STYLE: normal;
+    FONT-WEIGHT: 400;
+    margin: 10px;
+    border-bottom: 1px solid transparent ;
+}
+
+
+p
+{
+    COLOR:  Navy;
+    FONT-FAMILY: verdana, arial, sans-serif;
+    FONT-SIZE: 12px;
+    FONT-STYLE: normal;
+    FONT-WEIGHT: 400;
+}
+
+input, select, textarea
+{
+    COLOR: #ff0000;
+    FONT-FAMILY: verdana, arial, sans-serif;
+    FONT-SIZE: 11px;
+    FONT-STYLE: normal;
+    FONT-WEIGHT: 400;
+}
+
+span.detalle{
+	title: Muestra los detalles 
+	}
+span.abre_oferta{
+	title: Pone el estado de la oferta a "En curso", quedando a la vista de los candidatos
+	}
+span.cierra_oferta{
+	title: Pone el estado de la oferta a "Cerrada", quedando oculta a los candidatos 
+	}
+}
+

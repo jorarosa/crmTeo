@@ -1,0 +1,22 @@
+<?php
+require_once('configuracion.php');
+header( 'Content-type: text/html; charset=utf-8' );
+?>
+<link rel='stylesheet' href=scripts/estilos.css >
+<div class=cabecera>
+<span class=titulo > IES CLARA DEL REY. Formación en centros de trabajo y empleo </span>
+</div>
+<table class=ficha align=center cellpadding=10 >
+<tr><td align=center>
+<form action=empresa/login.php method=post><input type=image src=content/empresa.jpg></form>
+<p class=titular>Somos una entidad empleadora y/o colaboradora</p>
+</td></tr>
+<tr><td align=center>
+<form action=alumno/login.php method=post><input type=image src=content/alumno.jpg></form>
+<p class=titular>Soy un alumno del IES Clara Del Rey</p></form>
+</td></tr>
+<tr><td align=center>
+<form action=tutor/login.php method=post> <input type=image src=content/tutor.jpg></form>
+<p class=titular>Soy Tutor de FCT en el IES Clara Del Rey</p>
+</td></tr>
+</table>

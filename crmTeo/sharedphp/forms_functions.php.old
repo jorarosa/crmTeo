@@ -1,0 +1,1413 @@
+<?php
+//Actualiza el formulario con los valores del $_REQUEST
+//Chequea las mascaras, y devuelve cierto si no hay error. Falso cuando hay errores en elmatching
+
+function RequestToForm(&$fo){
+	$form=&$fo['fields'];
+	$error=false;
+	$error_text="";
+	//if debug() print_r($fo);
+	//if debug() print_r($_REQUEST);
+	foreach ( $form as $campo=>$valor ) {
+		//Aqui pasaremos el validador
+		$field_name=$fo['name']."_".$campo;
+		
+		if (isset($_REQUEST[$field_name])){
+			if(isset($form[$campo]['max'])){ //Recorte
+				//$form[$campo]['valor']=htmlentities(stripslashes(substr($_REQUEST[$campo],0,$form[$campo]['max'])));
+				$form[$campo]['valor']=substr($_REQUEST[$field_name],0,$form[$campo]['max']);
+				//echo ($_REQUEST[$campo]. "STRIP<br>");
+			}
+			else{
+				$form[$campo]['valor']=$_REQUEST[$field_name];
+				//echo ($_REQUEST[$campo]. "<br>");
+			}
+			//echo "Asigno " . $_REQUEST[$campo] ;
+		}
+	}
+	//print_r($form);
+
+	return (!$error);
+}
+
+
+//Chequea las expresiones regulares y marca los campos erróneos
+//Devuelve cierto si todo esta bien
+
+function CheckValues(&$fo){
+	global $Config;
+	$form=&$fo['fields'];
+	$error=false;
+	$error_text="";
+
+	foreach ( $form as $campo=>$valor ) {
+
+		//Si el campo es requerido y no esta, error
+		if ($form[$campo]['r'] &&
+				(trim($form[$campo]['valor']) =="" || $form[$campo]['valor']==$Config->nullstring))
+		{
+			$error=true;
+			$form[$campo]['err']=true;
+		}
+		else if (isset($form[$campo]['m']) &&
+				$form[$campo]['valor']!="" &&
+				$form[$campo]['valor']!=$Config->nullstring){//Mascara puesta y valor dado
+			if(!preg_match($form[$campo]['m'],
+					$form[$campo]['valor'])){
+				$error=true;
+				$form[$campo]['err']=true;
+			}
+		}
+
+		//Comprobacion adicional sobre fechas
+		if($form[$campo]['t']=="DATE" && strlen($form[$campo]['valor']) > 0) {
+			$s=explode("/",$form[$campo]['valor'],3);
+			/*
+			 if ($s[0]!=2 || $s[1]!=2 || $s[2]!=4){
+			$error=true;
+			$form[$campo]['err']=true;
+			}
+			*/
+			if (!checkdate($s[1],$s[0],$s[2])){
+				$error=true;
+				$form[$campo]['err']=true;
+			}
+		}
+	}
+	if($error){
+		$fo['errormsg'].="Hay campos obligatorios que se han omitido,";
+		$fo['errormsg'].=" o tienen valores no válidos";
+		foreach ($form as $campo => $value) {
+			if ( $form[$campo]['err'] )
+				$fo['errormsg'].=(" ".$campo);
+		}
+	}
+	return (!$error);
+}
+
+function LimpiarForm(&$fo){
+	global $Config;
+	if($Config->debug_sql) {
+			echo "Entrando en Limpiar ". $fo['name'] ."<br>";
+			debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+	}
+	$form=&$fo['fields'];
+	foreach ( $form as $campo=>$valor ) {
+		if (isset($form[$campo]['de'])){//Valor por defecto puesto
+			$form[$campo]['valor']= $form[$campo]['de'];
+		}
+		else {
+			$form[$campo]['valor']="";
+		}
+	}
+	$fo['filas']=0;
+	$fo['query']="";
+	$fo['where']="";
+	$fo['errormsg']="";
+	$fo['statusmsg']="";
+	//$fo['lastquery']="";
+	//	$fo['resultset']=false;
+}
+
+function ShowErrorMsg(&$fo){
+	echo $fo['errormsg'];
+}
+function ShowStatusMsg(&$fo){
+	echo $fo['statusmsg'];
+}
+
+function InputOrShow($edit,&$fo,$campo,$separador="</td><td>",$label=true){
+	$f=&$fo['fields'];
+	$readonly=false;
+
+	if (isset($f[$campo]['ro'])) $readonly=$f[$campo]['ro'];
+
+	if ($edit & !$readonly) Input(&$fo,$campo,$separador,$label);
+	else Show(&$fo,$campo,$separador,$label);
+}
+
+//MUestra el valor del campo como Input pero sin edicion
+function Show(&$fo,$campo,$separador="</td><td>",$label=true){
+	$f=&$fo['fields'];
+
+	if ($label){
+		$title="";
+		if (isset($f[$campo]['T'])) $title=" title='".$f[$campo]['T']."'";
+		echo "<span class='label'".$title.">".$f[$campo]['l']."</span>"; //Etiqueta
+	}
+	if(strlen($f[$campo]['l'])>0) echo $separador;
+
+	if(!isset($f[$campo]['t']) || ($f[$campo]['t']=='TEXT') || ($f[$campo]['t']=='DATE')){
+		echo "<span class='tedtext' >";
+		if (isset($f[$campo]['max']))
+			echo stripslashes(substr($f[$campo]['valor'],0,$f[$campo]['max']));
+		else echo $f[$campo]['valor'];
+		echo "</span>";
+	}
+
+	else if($f[$campo]['t']=='HTML' ){
+		echo $f[$campo]['html'];
+	}
+
+	else if ($f[$campo]['t']=='TEXTAREA'){
+		echo "<span class='textarea'>";
+		//echo nl2br($f[$campo]['valor']);
+		//echo stripslashes(substr($f[$campo]['valor'],0,$f[$campo]['max']));
+		echo htmlentities(stripslashes(substr($f[$campo]['valor'],0,$f[$campo]['max'])),0,'UTF-8');
+		echo "</span>";
+	}
+
+	else if ($f[$campo]['t']=='HIDDEN'){
+	}
+
+	else if ($f[$campo]['t']=='COMBO'){
+
+		if (isset($f[$campo]['ql'])){
+			echo  "<span class='tedtext'>".$f[$campo]['valor']."</span>"; //valor selected
+		}
+
+		else if (isset($f[$campo]['qll'])){
+			$clave=$f[$campo]['valor'];
+			echo   "<span class='tedtext'>".$f[$campo]['qll'][$clave]. "</span>"; //valor selected
+		}
+
+		else if(isset($f[$campo]['q'])){
+			$q=$f[$campo]['q'];
+			//echo "La query es $q";
+			$r=mysql_query_d($q);
+			while ($fila=mysql_fetch_row($r)){
+				if ($fila[0]==$f[$campo]['valor']) echo  "<span class='tedtext'>".$fila[1]."</span>";
+			}
+		}
+
+		else if (isset($f[$campo]['qs'])){ //Se trata del nombre de una funcion javascript
+			echo "<script>".$f[$campo]['qs']."('".$f[$campo]['valor']."','".$campo."',false);</script>" ; //pasando como parametro el valor y el nombre. Combo de paises
+		}
+		else {
+			echo "Error, COMBO".$campo."q ni ql ni qll";
+			return;
+		}
+	}
+
+	else if ($f[$campo]['t']=='CHECKLIST'){
+		HtmlCheckList($f[$campo]['q'],$campo,$f[$campo]['sep'],"list");
+	}
+
+	else {
+		echo "Tipo no conocido"; //Tipo de campo no conocido
+	}
+
+}
+
+
+
+
+
+
+
+//$fo es la descripcion de un formulario y $campo es el nombre campo
+function Input(&$fo,$campo,$separador="</td><td>",$label=true){
+
+	$f=&$fo['fields'];
+	$field_name=$fo['name']."_".$campo ;
+
+	if($f[$campo]['Pre_Show']!=""){
+		eval($f[$campo]['Pre_Show']);;
+	}
+
+	if ($label) {
+		$title="";
+		if (isset($f[$campo]['T'])) $title=" title='".$f[$campo]['T']."'";
+		echo "<span class='label'".$title.">".$f[$campo]['l']."</span>"; //Etiqueta
+	}
+
+	if(strlen($f[$campo]['l'])>0) echo $separador;
+
+
+	if(!isset($f[$campo]['t']) || ($f[$campo]['t']=='TEXT') || ($f[$campo]['t']=='DATE' )){
+		echo "<input name='".$field_name."' class=field ";
+		echo "value=\"".$f[$campo]['valor']."\" ";
+		if (isset($f[$campo]['s'])){ //Atributo size
+			echo "size='".$f[$campo]['s']."' ";
+		}
+		if (isset($f[$campo]['max'])){ //atributo maxlengt
+			echo "maxlength='".$f[$campo]['max']."' ";
+		}
+
+		if (isset($f[$campo]['ro'])){ //atributo read only
+			echo " disabled ";
+		}
+		echo ">\n";
+	}
+
+	if($f[$campo]['t']=='HTML'){
+		echo $f[$campo]['html'];
+	}
+
+	if($f[$campo]['t']=='PASSWORD'){
+		echo "<input class=field type=password name='".$field_name."' ";
+		echo "value=\"".$f[$campo]['valor']."\" ";
+		if (isset($f[$campo]['s'])){ //Atributo size
+			echo "size='".$f[$campo]['s']."' ";
+		}
+		if (isset($f[$campo]['max'])){ //atributo maxlengt
+			echo "maxlength='".$f[$campo]['max']."' ";
+		}
+		echo ">\n";
+	}
+
+	if($f[$campo]['t']=='HIDDEN'){
+		echo "<input type=hidden name='".$field_name."' ";
+		echo "value=\"".$f[$campo]['valor']."\" ";
+		echo ">\n";
+	}
+
+	else if ($f[$campo]['t']=='COMBO'){
+		if(isset($f[$campo]['q'])){
+			HtmlSelect($f[$campo]['q'], 	//query
+			$field_name,		//nombre
+			$f[$campo]['valor']); //Valor selected
+		}
+		else if (isset($f[$campo]['ql'])){
+			echo do_select_matriz($field_name, //nombre
+					$f[$campo]['ql'], //lista valores
+					$f[$campo]['valor']); //valor selected
+		}
+		else if (isset($f[$campo]['qll'])){ //Se trata de un array asociativo
+			//echo "Con HtmlAsocArray";
+			HtmlAsocArray($f[$campo]['qll'], //Array asociativo
+			$field_name, //Nombre del control
+			$f[$campo]['valor']); //Valor selected
+		}
+		else if (isset($f[$campo]['qs'])){ //Se trata del nombre de una funcion javascript
+			//echo "<script>".$f[$campo]['qs']."('".$f[$campo]['valor']."','".$campo."',true);</script>" ; //pasando como parametro el valor y el nombre. Combo de paises, y la opcion de edicion
+			echo "<script>".$f[$campo]['qs']."('".$f[$campo]['valor']."','".$field_name."',true);</script>" ; //pasando como parametro el valor y el nombre. Combo de paises, y la opcion de edicion
+		}
+		else {
+			echo "Error, COMBO".$campo."q ni ql ni qll";
+			return;
+		}
+	}
+	else if ($f[$campo]['t']=='TEXTAREA'){
+		echo "<textarea ".$f[$campo]['htmlatt']." name='".$field_name."' onKeyUp='return ismaxlength(this)' " ;
+
+		if (isset($f[$campo]['max'])){ //atributo maxlengt
+			echo "maxlength='".$f[$campo]['max']."' ";
+		}
+
+		echo " >";
+		//echo $f[$campo]['valor'];
+		echo htmlentities(stripslashes(substr($f[$campo]['valor'],0,$f[$campo]['max'])),0,'UTF-8');
+		//echo stripslashes(substr($f[$campo]['valor'],0,$f[$campo]['max']));
+		echo "</textarea>\n";
+	}
+
+	else if ($f[$campo]['t']=='CHECKLIST'){
+		HtmlCheckList($f[$campo]['q'],$field_name,$f[$campo]['sep']);
+	}
+
+
+	//if ($fo['fields']['id']['valor'] == "" ){ //Estos indicadores de consulta u obligatoriedad solo cuando estamos vacios
+	if (true ){ //Estos indicadores de consulta u obligatoriedad solo cuando estamos vacios
+		if ($f[$campo]['r']){//Required
+			echo "<span style='color: #FF8810;font-size: small' >*</span>";
+		}
+
+		if ($f[$campo]['co']){//Consultable
+			echo "<span style='color: green;font-size: small' >*</span>";
+		}
+	}
+
+
+	if ($f[$campo]['err']){
+		echo "<span style='color:#FF8810 ;font-size: small' >Error</span>";
+		$f[$campo]['err']=false;
+	}
+}
+
+//Crea y ejecuta la insert con los datos del formulario
+//Devuelve cierto si va bien o falso si mal
+
+function FormToBdAlta(&$fo){
+	global $Config;
+	$form=&$fo['fields'];
+	$tabla=$fo['table'];
+	$q="insert into $tabla (";
+	$x=0;
+	foreach ($form as $clave=>$valor){
+		if($form[$clave]['ac']){ //Solo si el campo es act
+			if ($x++>0) $q.=",";
+			$q.=$clave;
+		}
+	}
+	$q.=") values (";
+	$x=0;
+	foreach ($form as $clave=>$valor){
+		if($form[$clave]['ac']){ //Solo si el campo es act
+			if ($x++>0) $q.=",";
+			if ($form[$clave]['t'] == "DATE" && $valor['valor']!=""){//Convertir a YYYY-MM-DD
+				$s=explode("/",$valor['valor'],3);
+				$am_date=$s[2]."-".$s[1]."-".$s[0];
+				$q.="'".$am_date."'";
+			}
+			else { //Caso general
+				if ($Config->nullstring == $valor['valor'] || $valor['valor']=="") $q.="NULL";
+				else $q.="'".addslashes(html_entity_decode($valor['valor'])) . "'";
+			}
+		}
+	}
+	$q.=") ";
+	//echo "LA insert es $q <br>";
+	//echo "<script> alert('La query es ". addslashes($q) ."')</script>" ;
+
+	if (! mysql_query_d($q)) {
+		$fo['errormsg']="Error realizando la inserción. Intenteló de nuevo en unos instantes. ";
+		echo "<!-- ERROR ". mysql_error() . "--> ";
+	}
+	else { //Recogemos el lastid y lo ponemos en el formulario campo id. Registramos el acceso
+		$re=mysql_query_d("select last_insert_id();");
+		$row=mysql_fetch_row($re);
+		$form['id']['valor']=$row[0];
+		//echo "El last id es $row[0]";
+		$fo['statusmsg']="Registros insertados : ". mysql_affected_rows();
+		//registra_acceso($tabla,$row[0],"IN"); //Registro del acceso
+	}
+}
+//Construye la query en base a los campos consultables del formulario y efectua la consulta
+function FormQuery(&$fo,Form_iterator $it=null){
+	global $Config;
+	if ($Config->debug_sql ) {
+			echo "Entrando en FormQuery ".$fo['name']."<br>\n";
+			debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+			}
+	$form=&$fo['fields'];
+	$name=$fo['name'];
+	$tabla=$fo['table'];
+	global $Config;
+	$q="select ";
+	$x=0;
+
+	$campos_query="";
+	foreach ($form as $clave=>$valor){
+		//if(isset($form[$clave]['co']) && $form[$clave]['co'] ){ //Solo si el campo es co
+		if($form[$clave]['bd']){ //Solo si el campo tiene reflejo en la bd
+			if ($x++>0) $campos_query.=",";
+			//if ($form[$clave]['t']=='DATE'){ $campos_query.="DATE_FORMAT($clave,'%d/%c/%y')"; }else
+			$campos_query.=$clave;
+		}
+	}
+
+	if (strlen ($campos_query) > 0 ) $q.=$campos_query ;
+	else{ //Error ningun campo del formulario tiene bd a true
+		echo "Error formando la query. ningun campo del formulario tiene el atributo bd a true";
+		//return null;
+	}
+
+	$q.=" from " . $tabla; $query=$q;
+
+	$where="";
+	$x=0;
+	foreach ($form as $clave=>$valor){
+		if($form[$clave]['co'] && strlen($valor['valor'])>0 && $valor['valor'] != $Config->nullstring){ //Solo si el campo es co y tiene algo en valor
+			if ($x++>0) $where.=" and ";
+
+
+			if ($form[$clave]['t']=='DATE'){
+				//echo $valor;
+				$s=explode("/",$valor['valor'],3);
+				$f_am=$s[2]."-".$s[1]."-".$s[0];
+				$where.=$clave." like '".addslashes(html_entity_decode($f_am)) . "'";
+			}
+			else {if ( strstr($valor['valor'],"%") ||  strstr($valor['valor'],"?"))
+				$where.=$clave." like '".addslashes(html_entity_decode($valor['valor'])) . "'";
+			else
+				$where.=$clave."='".addslashes(html_entity_decode($valor['valor'])) . "'";
+			}
+		}
+	}
+
+	//where2 es un filtro adicional que puede ponerse por programa
+	if(strlen($fo['where2']) > 0 ) {
+		//echo "HAY WHERE 2";
+		if (strlen($where) > 0 ) $where.= " and ";
+		$where.= $fo['where2'];
+	}
+
+	if(strlen($where)>0) $q.=" where " . $where ;
+
+
+	if(strlen($fo['order']) > 0 ) {
+		//echo "HAY ORDER";
+		$q.=" order by " . $fo['order'] ;
+	}
+	
+	/*
+	 if(strlen($fo['offset'])>0 && strlen($fo['limit'])>0){ //Debemos paginar
+	$q.= " limit ". $fo['offset'] . "," . $fo['limit'] ;
+	}
+	*/
+	//echo "<script> alert('La query es ". addslashes($q) ."')</script>" ;
+	$re=mysql_query_d ($q); //Consultamos
+		
+	if ($re){
+		//$_SESSION[$name.'query']=$q;
+		$fo['query']=$q;
+		$fo['lastquery']=$q;
+		$fo['where']=$where;
+		$fo['filas']=mysql_num_rows($re);
+		$fo['statusmsg']=$fo['filas'] . " registros encontrados";
+		$fo['indice']=0;
+		if($it){
+			$it->query=$q;//Actualizo el iterador si se ha dado
+			$it->indice=0;
+			$it->filas=$fo['filas'];
+			mysql_free_result($re);
+			$re=mysql_query_d($it->query. " limit ".$it->indice.",".$it->length);
+		}
+		
+	}
+	else{
+		$fo['errormsg']="Error realizando la consulta. Intenteló de nuevo. ";
+		echo "<!-- ERROR ". mysql_error() . "--> ";
+	}
+	//Asignamos valores de la primera fila al formulario
+	//$fo['resultset']=&$re;
+	return $re;
+}
+
+
+
+function Primero(&$fo){
+	$fo['indice']=0;
+	return (Siguiente($fo,0));
+}
+
+function Ultimo(&$fo){
+	$fo['indice']=$fo['filas'];
+	return Siguiente($fo,0);
+}
+
+function Siguiente(&$fo,$salto){
+	$name=$fo['name'];
+	//$q=$_SESSION[$name.'query'];
+	$q=$fo['query'];
+	if ($q=="") return false;
+	if (isset($fo['limit'])) $limit=$fo['limit'];
+	else $limit=1;
+
+	//echo "<br>LA query recuperada $name $q <br>";
+	//$fila = $_SESSION[$name.'numrow'] + $salto;
+	$fila=$fo['indice']+$salto;
+	if ($fila > $fo['filas']-1) $fila= $fo['filas']-1;
+	if ($fila < 0 ) $fila=0 ;
+	$q.=" limit ".$fila .",".$limit ;
+	//echo "LA query es $q ";
+	$re = mysql_query_d($q);
+	if (mysql_num_rows($re) > 0 ) {
+		//$_SESSION[$name.'numrow']+=$salto;
+		$fo['indice']=$fila;
+		$fo['offset']=$fila; //Para tabla edicion
+		return $re;
+	}
+	return false;
+}
+
+function RefrescaNumero(&$fo){
+	if ($fo['query']=="") return; //Si no hay query no hay nada que hacer
+	$q="select count(*) from ". $fo['table'];
+	if(strlen($fo['where']) > 0 )
+		$q.="where " . $fo['where'] ;
+
+	//echo "La query es "  . $q ;
+	$re=mysql_query_d($q);
+	if ($re) $row=mysql_fetch_row($re);
+	$fo['filas']=$row[0];
+}
+
+
+//Toma un array dinamico del resultado y lo pone en el formulario
+function ResultToForm(&$form,$re){
+	$row=mysql_fetch_assoc($re);
+	RowToForm($form,$row);
+}
+
+//Toma una fila de resultado  y lo pone en el formulario
+function RowToForm(&$form,$row){
+	if($row){
+		//print_r($row);
+		foreach($row as $clave=>$valor){
+			if ($form['fields'][$clave]['t']=='DATE'){
+				$s=explode("-",substr($valor,0,10),3);
+				if($s[0].$s[1].$s[2]!='00000000' && ! is_null($valor)){
+					$f_esp=$s[2]."/".$s[1]."/".$s[0];
+					$form['fields'][$clave]['valor']=$f_esp;
+				}
+				else $form['fields'][$clave]['valor']="";
+			}
+			else{
+				$form['fields'][$clave]['valor']=$valor;
+			}
+		}
+		//print_r($row);
+		//registra_acceso($form['table'],$row['id'],"SE");
+	}
+}
+
+//El formulario debe contar con el campo id, no modificable
+function FormToBdBorrar(&$fo){
+	$form=&$fo['fields'];
+	$tabla=$fo['table'];
+	$fo['statusmsg']="";
+	$fo['errormsg']="";
+	$q="delete from $tabla where id='".$form['id']['valor']."' limit 1";
+	//echo "!LA QUERY ES ". $q ."<br>";
+	if (! mysql_query_d($q)) {
+		$fo['errormsg']="Error realizando la modificacion. Intenteló de nuevo en unos instantes. ";
+		echo "<!-- ERROR ". mysql_error() . "--> ";
+	}
+	if ($fo['query']=="") LimpiarForm($fo);
+	else $fo['statusmsg']="Registros borrados: ". mysql_affected_rows();
+	if (mysql_affected_rows > 0 ){
+		//registra_acceso($tabla,$form['id']['valor'],"DE");
+	}
+}
+
+function Invoca($callback,&$form){
+	return ($callback($form));
+}
+
+//El formulario debe contar con el campo id, no modificable
+function FormToBdModif(&$fo){
+	global $Config;
+	$form=&$fo['fields'];
+	$tabla=$fo['table'];
+	//$fo['statusmsg']="";
+	//$fo['errormsg']="";
+	$q="update $tabla set ";
+	$x=0;
+	foreach ($form as $clave=>$valor){
+		if($form[$clave]['ac'] ) {
+			if ($x++>0) $q.=",";
+
+			if ($valor['valor']!=$Config->nullstring){
+
+				if ($form[$clave]['t'] == "DATE"){//Convertir a YYYY-MM-DD
+					$s=explode("/",$valor['valor'],3);
+					if ($s[2]){
+						$am_date=$s[2]."-".$s[1]."-".$s[0];
+						$q.=$clave."='".$am_date."'";
+					}
+					else $q.=$clave."=NULL";
+				}
+				else
+					$q.=$clave."='".addslashes(html_entity_decode($valor['valor'])) . "'";
+			}
+			else  $q.=$clave."=NULL "; //Es un nulo
+		}
+	}
+	$q.=" where id='".$form['id']['valor']."'";
+
+	//echo "!LA QUERY ES ". $q ."<br>";
+	//echo "<script> alert('La query es ". addslashes($q) ."')</script>" ;
+
+	if (! mysql_query_d($q)) {
+		$fo['errormsg'].="Error realizando la modificacion. Intenteló de nuevo en unos instantes. ";
+		echo "<!-- ERROR ". mysql_error() . "--> ";
+		return false;
+	}
+	else{
+		$fo['statusmsg'].="Registros modificados ".mysql_affected_rows();
+		//registra_acceso($tabla,$form['id']['valor'],"UP"); //Registro del acceso
+		return true;
+	}
+}
+
+function InputNavegador(&$fo)
+{
+	global $Config;
+	$name=$fo['name']."_action"; //nombre del formulario
+	$acciones=$fo['acciones'];
+	echo "<center>";
+	if($fo['fields']['id']['valor'] == ""  && strstr ($acciones,"Insertar")){
+		//echo "<input type=submit class=orden value=Insertar name='".$name."' >";
+		//echo "<button type=submit class=orden value=Insertar name='".$name."' >";
+		//echo "<img border=0 src='".$Config->url_base."/content/iconos/Add.png' width=14></button>";
+		echo "<input Alt='A�adir' type=image src='".$Config->url_base."/content/iconos/Add.png' class=ordenb name='".$name."_Insertar' > ";
+	}
+	if($fo['fields']['id']['valor'] == ""  && strstr ($acciones,"Consulta")){
+		//echo "<input type=submit class=orden value=Consultar name='".$name."' >";
+		//echo "<button type=submit class=orden value=Consultar name='".$name."' >";
+		//echo "<img border=0 src='".$Config->url_base."/content/iconos/Refresh.png' width=14 alt=Consultar ></button>";
+		echo "<input type=image alt=Consultar src='".$Config->url_base."/content/iconos/Refresh.png' class=ordenb name='".$name."_Consultar' > ";
+	}
+	if($fo['fields']['id']['valor'] != "" && strstr($acciones,"Actualizar")){
+		//echo "<input type=submit class=orden value=Actualizar name='".$name."' >";
+		//echo "<button type=submit class=orden value=Actualizar name='".$name."' >";
+		//echo "<img border=0 src='".$Config->url_base."/content/iconos/Yes.png' width=14 alt=Actualizar ></button>";
+		echo "<input alt='Actualizar' type=image src='".$Config->url_base."/content/iconos/Yes.png' class=ordenb name='".$name."_Actualizar' > ";
+	}
+
+	if($fo['fields']['id']['valor'] != "" && strstr($acciones,"Borrar")){
+		//echo "<input type=submit class=orden value=Borrar name='".$name."'>";
+		//echo "<button type=submit class=orden value=Borrar name='".$name."'>";
+		//echo "<img border=0 src='".$Config->url_base."/content/iconos/Delete.png' width=14 alt=Borrar ></button>";
+		echo "<input Alt='Eliminar' type=image src='".$Config->url_base."/content/iconos/Delete.png' class=ordenb name='".$name."_Borrar' > ";
+	}
+	if (strstr($acciones,"Limpiar")){
+		//echo "<input type=submit class=orden value=Limpiar name='".$name."'>";
+		//echo "<button type=submit class=orden value=Limpiar name='".$name."'>";
+		//echo "<img border=0 src='".$Config->url_base."/content/iconos/New.png' width=14 alt=Limpiar ></button>";
+		echo "<input alt='Limpiar' type=image src='".$Config->url_base."/content/iconos/New.png' class=ordenb name='".$name."_Limpiar' > ";
+	}
+
+	if (strstr($acciones,"Navegar")){
+		if($fo['filas'] > 1 ){
+			//echo "<input type=submit class=orden value='Primero' name='".$name."'>";
+			//echo "<button type=submit class=orden value='Primero' name='".$name."'>";
+			//echo "<img border=0 src='".$Config->url_base."/content/iconos/First.png' width=14 alt=Primero ></button>";
+		echo "<input alt='Primero' type=image src='".$Config->url_base."/content/iconos/First.png' class=ordenb name='".$name."_Primero' > ";
+		}
+
+		if($fo['filas'] > 2 ){
+			//echo "<input type=submit class=orden value='Anterior' name='".$name."'>";
+			//echo "<button type=submit class=orden value='Anterior' name='".$name."'>";
+			//echo "<img border=0 src='".$Config->url_base."/content/iconos/Back.png' width=14 alt=Anterior ></button>";
+			echo "<input alt='Anterior' type=image src='".$Config->url_base."/content/iconos/Back.png' class=ordenb name='".$name."_Anterior' > ";
+
+			//echo "<input type=submit class=orden value='Siguiente' name='".$name."'>";
+			//echo "<button type=submit class=orden value='Siguiente' name='".$name."'>";
+			//echo "<img border=0 src='".$Config->url_base."/content/iconos/Forward.png' width=14 alt=Siguiente ></button>";
+			echo "<input alt='Siguiente' type=image src='".$Config->url_base."/content/iconos/Forward.png' class=ordenb name='".$name."_Siguiente' > ";
+		}
+		if($fo['filas'] > 1 ){
+			//echo "<input type=submit class=orden value='Ultimo' name='".$name."' >";
+			//echo "<button type=submit class=orden value='Ultimo' name='".$name."' >";
+			//echo "<img border=0 src='".$Config->url_base."/content/iconos/Last.png' width=14 alt=Ultimo ></button>";
+			echo "<input alt='�ltimo' type=image src='".$Config->url_base."/content/iconos/Last.png' class=ordenb name='".$name."_Ultimo' > ";
+		}
+
+		if ( $fo['filas'] > 0 )
+			echo ($fo['indice']+1)." de ".$fo['filas'];
+	}
+	echo "</center>";
+}
+
+function ManageForm(&$fo,Form_iterator $it=null){
+	global $Config;
+	if ($Config->debug_sql) echo "Entrando ManageForm : " . $fo['name']."</br>";
+	//$acciones=array('Insertar','Actualizar','Borrar','Consultar','Primero','Anterior','Siguiente','Ultimo','Limpiar');
+	$acciones=explode(",",$fo['acciones']);
+	if(strstr($fo['acciones'],"Navegar")){ //Expandimos la mata-accion Navegar
+			$acciones[]='Anterior';
+			$acciones[]='Siguiente';
+			$acciones[]='Primero';
+			$acciones[]='Ultimo';
+			}
+	$action="";
+	$fname=$fo['name'];
+	//Establecemos el formulario en curso en una variable de sesion
+	//Vacio los mensajes
+	$fo['statusmsg']="";
+	$fo['errormsg']="";
+
+
+	//print_r($_REQUEST);
+	foreach($acciones as $acc){
+
+		if ( isset($_REQUEST[$fname."_action_".$acc]) ||
+				isset($_REQUEST[$fname."_action_".$acc."_x"])
+		) {
+			$_SESSION['CURRENT_MANAGED_FORM']=$fname;
+			$action=$acc; break;
+		}
+	}
+
+	//echo "LAccion es ". $action;
+
+	if( $action == 'Insertar'){
+		RequestToForm($fo);
+		if (CheckValues($fo)){
+			FormToBdAlta($fo);
+			if (isset($fo['post_insert'])){
+				call_user_func($fo['post_insert'],&$fo);
+			}
+		}
+	}
+
+	else if( $action == 'Actualizar' ){
+		RequestToForm($fo);
+		if (isset($fo['pre_update'])){
+			if (!call_user_func($fo['pre_update'],&$fo)){
+				return $action;
+			}
+		}
+
+		if (CheckValues($fo))
+			if (FormToBdModif($fo)){ //La actualización ha funcionado,refresco el form
+			if (isset($fo['post_update'])){
+				call_user_func($fo['post_update'],&$fo);
+			}
+		}
+	}
+
+		
+
+	else if( $action == 'Borrar' ){
+		//RequestToForm($fo);
+		FormToBdBorrar($fo);
+		RefrescaNumero($fo);
+		$re=Siguiente($fo,0);
+		if ($re) ResultToForm($fo,$re);
+
+		//LimpiarForm($fo);
+	}
+
+	else if( $action == 'Consultar' ){
+		RequestToForm($fo);
+		$re=FormQuery($fo,$it);
+		if ($re) {
+			ResultToForm($fo,$re);
+		}
+	}
+
+	else if( $action == 'Primero' ){
+		//RequestToForm($fo);
+		$re=Primero($fo);
+		if ($re) ResultToForm($fo,$re);
+	}
+
+	else if( $action == 'Anterior' ){
+		//RequestToForm($fo);
+		$re=Siguiente($fo,-1);
+		if ($re) ResultToForm($fo,$re);
+	}
+	else if( $action == 'Siguiente' ){
+		//RequestToForm($fo);
+		$re=Siguiente($fo,1);
+		if ($re) ResultToForm($fo,$re);
+	}
+	else if( $action == 'Ultimo' ){
+		//RequestToForm($fo);
+		$re=Ultimo($fo);
+		if ($re) ResultToForm($fo,$re);
+	}
+	else if( $action == 'Limpiar' ){
+		LimpiarForm($fo);
+	}
+	if ($Config->debug_sql) echo "Finalizando ManageForm : " . $fo['name'] ." $action</br>";
+	return $action;
+}
+
+//Muestra los valores del formulario, para editar o no
+function OnlyShow(&$fo, $edit=true){
+	echo "<table class=ficha >\n";
+	$x=1;
+	foreach($fo['fields'] as $campo=>$value){
+		if (!isset($fo['fields'][$campo]['sh']) || $fo['fields'][$campo]['sh']){
+			if ($x%2) echo "<tr><td align=right>";
+			else echo "</td><td align=right>";
+			if ($edit) Input($fo,$campo);
+			else Show($fo,$campo);
+			if($x%2)echo "</td><td align=right>";
+			else echo "</td></tr>\n";
+			$x++;
+		}
+	}
+	echo "</table>";
+}
+
+//Muestra y maneja el formulario
+function DoEverything(&$fo){
+	ManageForm($fo);
+	echo "<form method=post>";
+	OnlyShow($fo);
+	//echo "</table>";
+	InputNavegador($fo);
+	echo "</form>";
+
+	echo "<table align=center>";
+	echo "<tr>";
+	echo "<td colspan=4 bgcolor=indianred align=center>";ShowErrorMsg($fo);echo "</td>";
+	echo "</tr><tr>";
+	echo "<td colspan=4 bgcolor=LightGreen  align=center>";ShowStatusMsg($fo);echo "</td>";
+	echo "</tr>\n";
+	echo "</table>";
+}
+
+//Si edicion es false solo muestra. no permite editar
+function TablaEdicion(&$fs,$invert=false, Form_iterator $iterador=null,$edquery=null){
+	global $Config;
+	$id_editar=-1; //No se edita ningun registro
+	//Form para editar el registro
+	$altas=strstr($fs['acciones'],'Insertar') || strstr($f['acciones'],'Borrar');
+	$edicion=$altas || strstr($fs['acciones'],'Borrar') || strstr($fs['acciones'],'Actualizar');
+	//echo $fs['acciones'];
+	$accion_editar=$fs['name']."_editarid";
+	$key=array("id"=>$accion_editar);
+
+	if (isset($_REQUEST[$accion_editar])){
+		$id_editar=$_REQUEST[$accion_editar];
+	}
+
+	$modificar_id=$fs['name']."_insid";
+
+	if (isset($_REQUEST[$modificar_id])){//Actualizar la edicion
+		LimpiarForm($fs); //Pone los valores que corresponden (matricula)
+		$fs['fields']['id']['valor']=$_REQUEST[$modificar_id];
+		ManageForm($fs,$iterador);
+		if($fs['error']) return false;
+		$id_editar=-1; //Apagamos la edicion, hasta que pulsen editar de nuevo
+	}
+
+	if($iterador!=null){
+		$it_label="_f_it_".$iterador->iterator_name;
+		if ($iterador->query!='' and isset($_REQUEST[$it_label])){
+			//Usamos el iterador si es peticion del iterador
+			$r=mysql_query_d($iterador->query. " limit ".$iterador->indice.",".$iterador->length);
+		}
+		else {
+			$r=FormQuery($fs,$iterador);
+			}
+	}
+	//Tratamiento sin iterador
+	else if(strlen($fs['lastquery'])>0) $r=mysql_query($fs['lastquery']);//. " limit ".$fs['offset'].",".$fs['limit']);
+	else $r=FormQuery($fs);
+
+	//Status y error
+	echo "<table><tr>";
+	echo "<td colspan=4 bgcolor=indianred align=center>";ShowErrorMsg($fs);echo "</td>";
+	echo "</tr><tr>";
+	echo "<td colspan=4 bgcolor=LightGreen  align=center>";ShowStatusMsg($fs);echo "</td>";
+	echo "</tr></table>\n";
+
+	echo "<form method=post>";
+	if($r){
+		echo "<table border=0 class=ficha align=center >";
+
+		//Cabeceras. Si no se permite la edicion, no hay acción
+		if ($edicion)echo "<tr><th><span class=labelhead>Acción</span></th>\n";
+		else echo "<tr><th><span class=labelhead></span></th>\n";
+
+		foreach($fs['fields'] as $name=>$value){
+			if (!isset($value['sh']) || $value['sh']){
+				$title="";if (isset($fs['fields'][$name]['T'])) $title="title='".$fs['fields'][$name]['T']."'" ;
+				echo "<th><span class=labelhead $title >".$fs['fields'][$name]['l']."</span></th>"; //Muestro la etiqueta
+			}
+		}
+
+		echo "</tr>\n";
+		if ($invert){ //EL alta delante
+			/* Formulario para alta */
+			if ($id_editar==-1 && $altas ){ //no estamos editando
+				LimpiarForm($fs);
+				echo "<td>"; InputNavegador($fs); echo "</td>";
+
+				foreach($fs['fields'] as $name=>$value){
+					if (!isset($value['sh']) || $value['sh']){
+						echo "<td>";
+						InputOrShow(true,$fs,$name,"",false);
+						echo "</td>";
+					}
+				}
+				echo "</tr>\n";
+			}
+		}
+		//Filas
+		while ($ro=mysql_fetch_array($r,MYSQL_ASSOC)){
+			$editar=false;
+			if($ro['id']==$id_editar) $editar=true;
+			RowToForm($fs,$ro);
+			echo "<tr>\n";
+			//La primera columna la acción
+
+			echo "<td align=center>";
+			if($edicion){
+				if($editar){
+					InputNavegador($fs);
+				}
+				//Solo saco el lapiz si el formulario permite la modificacion o baja
+				else  if(strstr($fs['acciones'],'Actualizar') || strstr($fs['acciones'],'Borrar')){
+					echo "<a href='".$_SERVER['PHP_SELF']."?";
+					foreach($key as $campo=>$valor){
+						echo "&".$valor."=".$ro["$campo"];
+					}
+					if (strlen($edquery) > 0 ) echo "&".$edquery; //Campos adicionales al pulsar editar ?
+					echo "'><img alt=Editar src='".$Config->url_base."/content/iconos/Modify.png' border=0 width=24></a>";
+				}
+			}
+			echo "</td>";
+
+			foreach($fs['fields'] as $name=>$value){
+				if (!isset($value['sh']) || $value['sh']){
+					//echo "<td>".$ro[$name]."</td>";
+					echo "<td style='max-width:200px' >";
+
+					if ($editar && $edicion) {
+						Input($fs,$name,"",false);
+					}
+					else Show($fs,$name,"",false);
+					echo "</td>";
+				}
+			}
+
+			echo "</tr>\n";
+		}//End While
+
+		if (!$invert) {//Alta al final
+			if ($id_editar==-1 && $altas ){ //no estamos editando
+				LimpiarForm($fs);
+				echo "<td>"; InputNavegador($fs); echo "</td>";
+				 
+				foreach($fs['fields'] as $name=>$value){
+					if (!isset($value['sh']) || $value['sh']){
+						echo "<td>";
+						InputOrShow(true,$fs,$name,"",false);
+						echo "</td>";
+					}
+				}
+				echo "</tr>\n";
+			}
+		}
+		echo "</table>\n";
+
+		echo "<input type=hidden name='".$modificar_id."' value='".$id_editar."'>";
+		echo "</form>\n";
+	}
+}
+
+function SetAllFieldsProperty(&$f,$prop,$value){
+	foreach($f['fields'] as $campo=>$valor){
+		$f['fields'][$campo][$prop]=$value;
+	}
+}
+
+
+//FUNCIONES UTILIZADAS EN INFORMES; LISTADOD Y FORMULARIOS
+//Presenta una lista multieleccion de los campos de un formulario dado como parametro.
+
+function form_fields_select(&$fo,array $excluir,$cab=true){
+	$form=&$fo['fields'];
+	$name=$fo['name'];
+	$tabla=$fo['table'];
+	global $Config;
+	$q="select ";
+	$x=0;
+	//echo "<form name=$name id=$name >";
+	if($cab) echo "<select class=field multiple name=$name id=$name size=8>";
+	foreach ($form as $clave=>$valor){
+		if(($form[$clave]['bd'] || $form[$clave]['calc'])&& !in_array($clave,$excluir)){ //Solo si el campo tiene reflejo en la bd o es calculado
+			echo "<option value='".$name.".".$clave."'>".$valor['l']."</option>\n";
+		}
+	}
+	if ($cab) echo "</select>\n";
+	//echo "</form>";
+}
+
+//Dada una query sql la presenta como una tabla con cabeceras
+//Si $resuelve, resuelve los valores a valores amigables utilizando el
+//formulario correspondiente.
+//PAra resolver cada campo pertencecera a una tabla con elmismo nombre del formulario pej festancia
+//El nombre del campo en la query debe coincidir con del nombre del campo en la query. En otro caso
+//No hay resolución.
+
+function show_query($s,$titulo="",$resuelve=false, array $cabeceras_extra=NULL){
+	$re=mysql_query_d($s);
+	//Si no hay filas no pintamos nada
+	if (mysql_num_rows($re) == 0 ) return;
+
+	//Si hay titulo lo sacamos
+	if(strlen($titulo)> 0)echo "<span class=rep2>$titulo<br></span>";
+	$num_fields=mysql_num_fields($re);
+	//Creo dos arrays tabla y campo para aligerar la resolucion
+	$tabla=array();$campo=array();
+	for ($x=0;$x<$num_fields;$x++){
+		$tabla[$x]=mysql_field_table($re,$x);
+		$campo[$x]=mysql_field_name($re,$x);
+	}
+	echo "<table class=subreport border=0>\n";
+	if($cabeceras_extra){
+		echo "<tr bgcolor=gray >\n";
+		foreach($cabeceras_extra as $key=>$value){
+			echo "<th colspan='".$value."'>".$key."</th>\n";
+		}
+		echo "</tr>\n";
+	}
+
+	echo "<tr bgcolor=gray>";
+	for ($x=0;$x<$num_fields;$x++){
+		if ($resuelve){
+			$fieldname=$campo[$x];
+			$formulario=$tabla[$x];
+			$f=&$_SESSION['forms'][$formulario];
+			if($f) echo "<th class=rhfield >&nbsp;" . $f['fields'][$fieldname]['l'] . "</th>";
+			else echo "<th class=rhfield >&nbsp;$fieldname</th>";
+		}
+		else
+			echo "<th class=rhfield >&nbsp;".mysql_field_name($re,$x)."</th>";
+	}
+	echo "</tr>\n";
+	$count=0;
+	while ($fila = mysql_fetch_array($re)){
+
+		$clase='class=reprow';if ($count++ % 2) $clase='class=reprowalt';
+		echo "<tr $clase >";
+		for ($x=0;$x<$num_fields;$x++){
+			if ($resuelve){
+				if (strstr($campo[$x],"@")){ //Introducido por la vista de estadisticas
+					$a=explode('@',$campo[$x]);
+					$fieldname=$a[1];
+					$formulario=$a[0];
+				}
+				else{
+					$fieldname=$campo[$x];
+					$formulario=$tabla[$x];
+				}
+				$f=&$_SESSION['forms'][$formulario];
+				echo "<td class=rfield >&nbsp;" . Resuelve($formulario,$fieldname,$fila[$x])  . "</td>";
+			}
+			else{
+				echo "<td class=rfield >&nbsp;$fila[$x]</td>";
+			}
+		}
+		echo "</tr>\n";
+	}
+	echo "</table>\n";
+	return $re;
+}
+
+//Crea un formulario con una checkbox por cada campo de un formulario dado
+function form_fields_choose(&$fo){
+	$form=&$fo['fields'];
+	$name=$fo['name'];
+	$tabla=$fo['table'];
+	global $Config;
+	$q="select ";
+	$x=0;
+	echo "<form name=$name id=$name >";
+	echo "<table border=0>";
+	foreach ($form as $clave=>$valor){
+		echo "<tr>";
+		if($form[$clave]['bd']){ //Solo si el campo tiene reflejo en la bd
+			echo "<td align=right>";
+			echo $valor['l'] ;
+			echo "</td><td>";
+			echo "<input type=checkbox name='".$clave."'>\n";
+			echo "</td>";
+		}
+		echo "</tr>";
+	}
+	echo "</table>";
+	echo "</form>";
+}
+
+//Crea y devuelve una query sql con todos los campos de un formulario
+//Ejemplo: crea una query basada en elformulario estancia y muestra el resultado
+//$sql=form_fields($festancia);
+//show_query($sql);
+//El ultimo parametro se usa para obtener solamente la lista de campos
+function form_fields(&$fo,array $excluir,$selectfrom=true,$alias=false){
+	$form=&$fo['fields'];
+	$name=$fo['name'];
+	$tabla=$fo['table'];
+	global $Config;
+	$q="";
+	if($selectfrom) $q.="select ";
+	$x=0;
+	foreach ($form as $clave=>$valor){
+		//Solo si el campo tiene reflejo en la bd o es calculado
+		if(($form[$clave]['bd'] || $form[$clave]['calc']) && !in_array($clave,$excluir)){
+			if ($x++>0) $q.=",";
+			if ($form[$clave]['calc']) $q.=$form[$clave]['calc'];
+			else $q.=$name.".".$clave;
+			//if ($alias) $q.=" as '". $form[$clave]['l']."'";
+			if ($alias) $q.=" as '". $name."@".$clave."'";
+		}
+	}
+	if($selectfrom) $q.=" from " . $tabla ." ".$name;
+	return $q;
+}
+
+//Muestra el valor amigable dado un valor y un campo de formulario
+//Los parametros son el nombre del formulario, el nombre del campo y el valor.
+//Utilizado por show_query
+function Resuelve($f_name,$campo,$valor){
+	if (!isset($_SESSION['forms'][$f_name] )) return $valor;
+	if (!isset($_SESSION['forms'][$f_name]['fields'][$campo] )) return $valor;
+	$fo=$_SESSION['forms'][$f_name];
+	$f=&$fo['fields'];
+
+	if(!isset($f[$campo]['t']) || ($f[$campo]['t']=='TEXT') || ($f[$campo]['t']=='DATE')){
+		if ($valor[4]=='-' && $valor[7]=='-'){
+			$arrd=explode('-',$valor);
+			return $arrd[2]."/".$arrd[1]."/".$arrd[0] ;
+		}
+		else return $valor;
+	}
+
+	else if ($f[$campo]['t']=='TEXTAREA'){
+		return $valor;
+	}
+	else if ($f[$campo]['t']=='HIDDEN'){
+		return "**";
+	}
+
+	else if ($f[$campo]['t']=='COMBO'){
+
+		if (isset($f[$campo]['ql'])){
+			return  $valor; //valor selected
+		}
+
+		else if (isset($f[$campo]['qll'])){
+			$clave=$f[$campo]['valor'];
+			return   $f[$campo]['qll'][$valor]; //valor selected
+		}
+
+		else if(isset($f[$campo]['q'])){
+			$q=$f[$campo]['q'];
+			//echo "La query es $q";
+			$r=mysql_query_d($q);
+			while ($fila=mysql_fetch_row($r)){
+				if ($fila[0]==$valor) return  $fila[1];
+			}
+		}
+
+		else if (isset($f[$campo]['qs'])){ //Se trata del nombre de una funcion javascript
+			return "<script>".$f[$campo]['qs']."('".$valor."','".$campo."',false);</script>" ; //pasando como parametro el valor y el nombre. Combo de paises
+		}
+		else {
+			echo "<!--Error, COMBO".$campo."q ni ql ni qll-->";
+			return $valor ;
+		}
+	}
+
+	else if ($f[$campo]['t']=='CHECKLIST'){
+		//HtmlCheckList($f[$campo]['q'],$campo,$f[$campo]['sep'],"list");
+		return $valor ;
+		echo "<!--Tipo no visualizable-->"; //Tipo de campo no conocido
+	}
+
+	else {
+		return $valor;
+		echo "<!--Tipo no conocido-->"; //Tipo de campo no conocido
+	}
+}
+
+
+//Crea los campos para el cuerpo del select basado en la lista
+//de atributos basado en los formularios.LA lista debe contener
+//los elementos con el formato nombre_de_formulario.nombre_de_campo
+//Observa los campos calculados 'calc'. Ver form_estancia.php
+
+function lista_to_select(array $lista){
+	$q="";
+	for ($i=0; $i<count($lista); $i++){
+		$ff=explode(".",$lista[$i]);
+		$formulario=$ff[0];
+		$campo=$ff[1];
+		//echo "Formulario $formulario campo $campo " ;
+		$formu=&$_SESSION['forms'][$formulario];
+		$etiqueta=$formu['fields'][$campo]['l'];
+		//$q.= $lista[$i] . " as '".$etiqueta."'";
+		if ($formu['fields'][$campo]['calc']){ //Es calculado como la estancia en meses
+			if($i>0) $q.=",";
+			$exp=$formu['fields'][$campo]['calc'];
+			$q.= $exp;
+			if (!strpos($exp,' as ')) $q.= " as '". $formu['fields'][$campo]['l']."'";
+		}
+		else{
+			if($i>0) $q.=",";
+			$q.= $lista[$i];
+		}
+	}
+	return $q;
+}
+
+
+//Obtiene las columnas que ocupa el atributo y el nombre amigable para pasarlo a show query
+//Devuelve un array asociativo ("Sexo"=>3, "Castellano"=>4 ) con el numero de cols que ocupa para la tabla
+
+function cab_tabla_est($f_name,$campo){
+	$cabt=array();
+	if (!isset($_SESSION['forms'][$f_name] )) {
+		echo "<!-- cab_estadistica Error el formulario $f_name no existe -->";
+		return $cabt;
+	}
+
+	if (!isset($_SESSION['forms'][$f_name]['fields'][$campo] )){
+		echo "<!-- cab_estadistica Error el campo $campo del formulario $f_name no existe -->";
+		return $cabt;
+	}
+
+	$fo=$_SESSION['forms'][$f_name];
+	$f=&$fo['fields'];
+
+	if (isset($f[$campo]['l'])) $nombre_amigo=$f[$campo]['l'];
+	else $nombre_amigo=$campo;
+
+
+	if (isset($f[$campo]['ql'])){//Un array simple
+		$arr=$f[$campo]['ql'];
+		//Añadimos el numero de entradas del array mas el defecto NE
+		$cabt[$nombre_amigo]=count($arr) + 1 ;
+	}
+
+	else if (isset($f[$campo]['qll'])){
+		$arr=$f[$campo]['qll'];
+		$cabt[$nombre_amigo]=count($arr) + 1 ;
+	}
+
+	else if(isset($f[$campo]['q'])){
+		$q=$f[$campo]['q'];
+		$cab="";
+		$valores="";
+		//echo "La query es $q";
+		$r=mysql_query_d($q);
+		$count=mysql_num_rows($r);
+		$cabt[$nombre_amigo]=$count+1;
+	}
+	return($cabt);
+}
+
+//Obtienen las cabeceras para la query SQL estadistica, dado un campo codificado
+//Usado desde report
+function cab_estadistica($f_name,$campo){
+	$cab="";
+	if (!isset($_SESSION['forms'][$f_name] )) {
+		echo "<!-- cab_estadistica Error el formulario $f_name no existe -->";
+		return "";
+	}
+
+	if (!isset($_SESSION['forms'][$f_name]['fields'][$campo] )){
+		echo "<!-- cab_estadistica Error el campo $campo del formulario $f_name no existe -->";
+		return "";
+	}
+
+	$fo=$_SESSION['forms'][$f_name];
+	$f=&$fo['fields'];
+
+
+	if (isset($f[$campo]['ql'])){//Un array simple
+		$arr=$f[$campo]['ql'];
+		$valores="";
+		$ind=0;
+		foreach($arr as $value){
+			if($ind++ > 0){
+				$cab.=","; $valores.=",";
+			}
+			//$cab.=" sum(if (".$f_name.".".$campo."='".$value."',1,0)) as '".$value."' ";
+			$cab.=" concat(sum(if (`".$f_name."@".$campo."`='".$value."',1,0)),'(',  ";
+			$cab.=" concat(round((sum(if (`".$f_name."@".$campo."`='".$value."',1,0)))/count(*)*100,1),'%)') ) as '".$value."' ";
+			$valores.="'".$value."'";
+		}
+		//Añadimos el caso default NE
+		//$cab.=", sum(if (".$f_name.".".$campo." not in (".$valores.") or ".$f_name.".".$campo." is null ,1,0)) as NE ";
+		$cab.=", concat(sum(if (`".$f_name."@".$campo."` not in (".$valores.") or `".$f_name."@".$campo."` is null ,1,0)),'(',concat(round((sum(if (`".$f_name."@".$campo."` not in (".$valores.") or `".$f_name."@".$campo."` is null ,1,0)))/count(*)*100,1),'%)')) as NE ";
+	}
+
+	else if (isset($f[$campo]['qll'])){
+		$arr=$f[$campo]['qll'];
+		$valores="";
+		$ind=0;
+		foreach($arr as $key => $value){
+			if($ind++ > 0){
+				$cab.=","; $valores.=",";
+			}
+			//$cab.=" sum(if (".$f_name.".".$campo."='".$key."',1,0)) as '".$value."' ";
+			$cab.=" concat(sum(if (`".$f_name."@".$campo."`='".$key."',1,0)),'(',  ";
+			$cab.=" concat(round((sum(if (`".$f_name."@".$campo."`='".$key."',1,0)))/count(*)*100,1),'%)') ) as '".$value."' ";
+			$valores.="'".$key."'";
+		}
+		//$cab.=", sum(if (".$f_name.".".$campo." not in (".$valores.") or ".$f_name.".".$campo." is null ,1,0)) as NE ";
+		$cab.=", concat(sum(if (`".$f_name."@".$campo."` not in (".$valores.") or `".$f_name."@".$campo."` is null ,1,0)),'(',concat(round((sum(if (`".$f_name."@".$campo."` not in (".$valores.") or `".$f_name."@".$campo."` is null ,1,0)))/count(*)*100,1),'%)')) as NE ";
+	}
+
+	else if(isset($f[$campo]['q'])){
+		$q=$f[$campo]['q'];
+		$cab="";
+		$valores="";
+		//echo "La query es $q";
+		$r=mysql_query_d($q);
+		$ind=0;
+		while ($fila=mysql_fetch_row($r)){
+			if($ind++ > 0){
+				$cab.=","; $valores.=",";
+			}
+			//$cab.=" sum(if (".$f_name.".".$campo."='".$fila[0]."',1,0)) as '".$fila[1]."' ";
+			$cab.=" concat(sum(if (`".$f_name."@".$campo."`='".$fila[0]."',1,0)),'(',  ";
+			$cab.=" concat(round((sum(if (`".$f_name."@".$campo."`='".$fila[0]."',1,0)))/count(*)*100,1),'%)') ) as '".$fila[1]."' ";
+			$valores.="'".$fila[0]."'";
+		}
+		//$cab.=", sum(if (".$f_name.".".$campo." not in (".$valores.") or ".$f_name.".".$campo." is null ,1,0)) as NE ";
+		$cab.=", concat(sum(if (`".$f_name."@".$campo."` not in (".$valores.") or `".$f_name."@".$campo."` is null ,1,0)),'(',concat(round((sum(if (`".$f_name."@".$campo."` not in (".$valores.") or `".$f_name."@".$campo."` is null ,1,0)))/count(*)*100,1),'%)')) as NE ";
+	}
+	return($cab);
+}
+
+//Iterador para formularios, contiene la query el indice actual y la altura (lentgh)
+class Form_iterator {
+	public	$indice;
+	public $query;
+	public $length;
+	public $filas;
+	public $iterator_name='iterator_name';
+	//        	private $form;
+	public
+	function Form_iterator($name,$len=10){
+		$this->iterator_name=$name;
+		$this->indice=0;
+		$this->length=$len;
+		$filas=0;
+		//$last_query=$fs['lastquery'];
+	}
+	function PagAv(){
+		if (($this->indice + $this->length) < $this->filas ) $this->indice=$this->indice+$this->length;
+	}
+	function PagRe(){
+		if (($this->indice - $this->length) >= 0) $this->indice=$this->indice-$this->length;
+	}
+
+	public static function factory($name='',$len){
+		session_start();
+		//if($name!=''){
+		//	self::$iterator_name=$name;
+		//}
+		if(isset($_SESSION[$name]) === TRUE ){
+			$i=unserialize($_SESSION[$name]);
+			if (isset($_REQUEST["_f_it_".$name."_Av"]) or 
+					isset($_REQUEST["_f_it_".$name."_Av_x"])) $i->PagAv() ;
+			if (isset($_REQUEST["_f_it_".$name."_Re"]) or  
+					isset($_REQUEST["_f_it_".$name."_Re_x"])) $i->PagRe() ;
+			return $i;
+		}
+		//echo "Creando el iterador  " . $name;
+		return new Form_iterator($name,$len);
+	}
+	
+	public function show(){ //muestra el control
+		global $Config;
+		echo "<form method=post>";
+		
+		if ($this->filas > $this->length ){
+			echo "<input type=image src='$Config->url_base/content/iconos/Back.png' value=Re name=_f_it_".$this->iterator_name."_Re >";
+
+			echo  ($this->indice+1) . " a "; 
+		
+			if (($this->indice+$this->length) > $this->filas )echo ($this->filas);
+			else echo ($this->indice+$this->length);
+			echo " de ";
+			}
+		
+		echo $this->filas . " registros ";
+		if ($this->filas > $this->length ){
+			echo "<input type=image src='$Config->url_base/content/iconos/Forward.png' value=Av name=_f_it_".$this->iterator_name."_Av >";
+		}
+		echo "<input type=hidden name=_f_it_".$this->iterator_name ." value=1 >";
+		echo "</form>";
+		
+	}
+
+	public function __destruct(){
+		$_SESSION[$this->iterator_name]=serialize($this);
+	}
+}
+?>

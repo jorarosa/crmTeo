@@ -1,0 +1,304 @@
+h1{
+font-size: 14px;
+}
+span.usuario{
+font-weight: bold;
+}
+span.centro{
+font-weight: bold;
+}
+.msg{
+	position:absolute;
+	background-color: DarkSlateBlue ;
+	text-align: center;
+	font-size: small;
+	color:  white;
+}
+.errormsg
+{
+position:absolute;
+text-align: center ;
+background-color: Indianred ;
+/*color: indianred;*/
+font-size: small;
+}
+
+.listadoc
+{
+position:absolute;
+text-align: center ;
+background-color: DarkSlateBlue ;
+/*color: indianred;*/
+font-size: small;
+top: 240px;
+}
+
+div.cabecera
+{
+color:white;
+background-color: DarkSlateBlue ;
+clear:left;
+height : 50px;
+width:100%;
+margin-bottom:10px;
+border:1px solid gray;
+padding:1px;
+}
+
+input.orden{
+	background-color:   white;
+	margin : 2px;
+	/*border: thin solid transparent ;*/
+	border: none ;
+/*	color: DarkSlateBlue;*/
+	font-weight: bold;
+}
+
+input.ordenb{ /* Botones de alta, baja , blanco etc */
+	background-color: white ;
+	margin : 2px;
+	/*border: thin solid transparent ;*/
+	width: 24px;
+}
+input.ordenselected{
+	background-color: white ;
+	margin : 2px;
+	border: thin solid transparent ;
+}
+
+a.orden{
+	/*background-color:  DarkSlateBlue;*/
+	margin : 2px;
+	font-size: 12px;
+	border: thin solid transparent ;
+	text-decoration: none;
+}
+
+input.aorden{
+	margin : 2px;
+	font-size: 12px;
+	/*border: none ;*/
+	background-color: transparent ;
+	color: blue;
+	}
+
+div.boxleft
+{
+position:absolute;
+left : 15px;
+top : 10;
+margin:0;
+padding:1px;
+/*white-space:nowrap;*/
+}
+
+div.boxcenter
+{
+position : absolute ;
+left : 40%;
+top : 15px;
+padding:1px;
+}
+
+div.boxright
+{
+position:absolute;
+right : 15px;
+top : 15px;
+padding:1px;
+}
+
+div.bloque{
+	position: relative;
+	/*top: 60px;*/
+	width:800px;
+	}
+
+div.cabeza{
+	position: relative;
+	top: 0px;
+	/*border: thick solid green;*/
+	height : 2px;
+	}
+
+div.menu{
+	position: relative;
+	top: 15;
+	width:800px;
+	white-space:nowrap
+	}
+div.submenu{
+	position: absolute;
+	top: 53;
+	width:800px;
+	white-space:nowrap
+	}
+
+.option{
+	background-color: DarkSlateBlue;
+	color:  white;
+	height: 19;
+	font-weight: bold;
+	}
+
+.opselec{
+	background-color:  white;
+	color: DarkSlateBlue;
+	height: 19;
+	font-weight: bold;
+	}
+
+
+div.formmenu{
+	position: absolute;
+	top: 45px;
+	width:800px;
+	white-space:nowrap
+	}
+
+div.form{
+	position: absolute;
+	width: 100%;
+	/*top: 60px;*/
+	top: 75;
+	/*border: thick solid red ;*/
+	}
+
+div.subform{
+	position: absolute;
+	background-color: white ;
+	/*border : thick solid DarkSlateBlue ;*/
+	top: 0;
+	width: 100%;
+	height: 300;
+	padding : 5px;
+	/*overflow: scroll;*/
+	}
+
+div.subform2{
+	position: absolute;
+	background-color: white ;
+	/*border : thick solid DarkSlateBlue ;*/
+	top: 30;
+	width: 800px;
+	height: 200;
+	padding : 5px;
+	}
+
+div.status{
+	position: absolute;
+	width: 100%;
+	top: 300;
+	font-size: small;
+	}
+
+span.navigator{
+	/*position: absolute;*/
+	left: 30%;
+	}
+
+div.pie{
+	position: absolute;
+	left: 30%;
+	top: 400px;
+	}
+p.piedoc{
+	position: absolute;
+	text-align: center;
+	top: 300px;
+	background-color: IndianRed ;
+	}
+
+
+	
+span.titulo{
+font-family: Helvetica; 
+font-size: 15pt; 
+text-decoration: none; 
+text-align: right; 
+vertical-align: top; 
+font-weight: bold;
+margin: 2px;
+/*border: thin solid ;*/
+}
+a.opcion{
+font-family: Helvetica; 
+font-size: 10pt; 
+text-decoration: none; 
+text-align: center; 
+vertical-align: top; 
+font-weight: bold;
+margin: 2px;
+/*position: absolute ;*/
+border: thin solid ;
+}
+
+div.central{
+	position: absolute; 
+	top:70px;
+	width :100%;
+	height : 80% ;
+	margin-right:1px;
+	}
+
+table.ficha{
+	background-color: white ;
+	width : 800px;
+	border-spacing: 4px;
+	border : thin solid green;
+	font-size: 10px;
+	}
+/* Etiquetas de campos y cabecera de tabla */
+span.label{ 
+	font-family: arial, "lucida console", sans-serif ;
+	margin : 5px;
+	font-size: small;
+	text-align: right;
+	white-space:nowrap
+	}
+
+a.posicion{ 
+	position: absolute; 
+	font-family: arial, "lucida console", sans-serif ;
+	/*margin : 5px;*/
+	font-size: 8px;
+	top: 60;
+	text-align: right;
+	white-space:nowrap
+	}
+
+span.tedtext{ 
+	font-family: arial, "lucida console", sans-serif ;
+	margin : 1px;
+	font-size: small;
+	text-align: right;
+	margin: 10px;
+	color: red;
+	}
+
+
+span.labelhead{
+	font-family: arial, "lucida console", sans-serif ;
+	margin : 5px;
+	font-size: small;
+	text-align: right;
+	white-space:nowrap;
+	font-weight: bold;
+	}
+
+.field{
+	font-family: arial, "lucida console", sans-serif ;
+	margin : 0px;
+	font-size: small;
+	color:red;
+	}
+
+span.errmsg{
+	background-color: IndianRed ;
+	width : 800px;
+	}
+
+span.msg{
+	background-color: white ;
+	width : 800px;
+	}
